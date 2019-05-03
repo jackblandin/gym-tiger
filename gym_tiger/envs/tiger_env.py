@@ -7,20 +7,28 @@ from gym import spaces
 import numpy as np
 
 
-ACTION_LISTEN = 0
-ACTION_OPEN_LEFT = 1
-ACTION_OPEN_RIGHT = 2
+OBS_GROWL_LEFT = [1, 0, 0]
+OBS_GROWL_RIGHT = [0, 1, 0]
+OBS_SILENCE = [0, 0, 1]
+
+ACTION_OPEN_LEFT = 0
+ACTION_OPEN_RIGHT = 1
+ACTION_LISTEN = 2
 ACTION_MAP = {
-    ACTION_LISTEN: 'LISTEN',
     ACTION_OPEN_LEFT: 'OPEN_LEFT',
     ACTION_OPEN_RIGHT: 'OPEN_RIGHT',
+    ACTION_LISTEN: 'LISTEN',
 }
 
 
 class TigerEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self):
+    def __init__(self, reward_tiger=-100, reward_gold=10, reward_listen=-1):
+        self.reward_tiger = reward_tiger
+        self.reward_gold = reward_gold
+        self.reward_listen = reward_listen
+
         self.__version__ = "0.1.0"
         logging.info("TigerEnv - Version {}".format(self.__version__))
 
@@ -33,10 +41,10 @@ class TigerEnv(gym.Env):
         self.reset()
 
         # Define what the agent can do: LISTEN, OPEN_LEFT, OPEN_RIGHT
-        self.action_space = spaces.Discrete(2)
+        self.action_space = spaces.Discrete(3)
 
-        # Define what the agent can observe: GROWL_LEFT, GROWL_RIGHT
-        self.observation_space = spaces.Discrete(1)
+        # Define what the agent can observe: GROWL_LEFT, GROWL_RIGHT, NONE
+        self.observation_space = spaces.Discrete(3)
 
     def step(self, action):
         """
@@ -95,7 +103,7 @@ class TigerEnv(gym.Env):
         # TODO fix this random update
         self.tiger_left = np.random.randint(0, 2)
         self.tiger_right = 1 - self.tiger_left
-        return [-1, -1]
+        return OBS_SILENCE
 
     def render(self, mode='human'):
         return
@@ -111,8 +119,16 @@ class TigerEnv(gym.Env):
             return 'GROWL_LEFT'
         elif obs[1] == 1:
             return 'GROWL_RIGHT'
+        elif obs[2] == 1:
+            return 'SILENCE'
         else:
-            return 'NONE'
+            raise ValueError('Invalid observation: '.format(obs))
+
+    def translate_action(self, action):
+        """
+        Method created by JDB to easily interpret action in plain English.
+        """
+        return ACTION_MAP[action]
 
     def _take_action(self, action):
         self.action_episode_memory[self.curr_episode].append(action)
@@ -127,17 +143,17 @@ class TigerEnv(gym.Env):
 
     def _get_reward(self):
         if not (self.left_door_open or self.right_door_open):
-            return -1
+            return self.reward_listen
         if self.left_door_open:
             if self.tiger_left:
-                return -100
+                return self.reward_tiger
             else:
-                return 10
+                return self.reward_gold
         if self.right_door_open:
             if self.tiger_right:
-                return -100
+                return self.reward_tiger
             else:
-                return 10
+                return self.reward_gold
         raise ValueError('Unreachable state reached.')
 
     def _get_obs(self):
@@ -146,13 +162,13 @@ class TigerEnv(gym.Env):
             # Return accurate observation
             if np.random.rand() < .85:
                 if self.tiger_left:
-                    return [1, 0]
+                    return OBS_GROWL_LEFT
                 else:
-                    return [0, 1]
+                    return OBS_GROWL_RIGHT
             # Return inaccurate observation
             else:
                 if self.tiger_left:
-                    return [0, 1]
+                    return OBS_GROWL_RIGHT
                 else:
-                    return [1, 0]
-        return [-1, -1]
+                    return OBS_GROWL_LEFT
+        return OBS_SILENCE
