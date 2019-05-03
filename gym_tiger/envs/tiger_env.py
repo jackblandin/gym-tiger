@@ -7,9 +7,10 @@ from gym import spaces
 import numpy as np
 
 
-OBS_GROWL_LEFT = [1, 0, 0]
-OBS_GROWL_RIGHT = [0, 1, 0]
-OBS_SILENCE = [0, 0, 1]
+OBS_GROWL_LEFT = [1, 0, 0, 0]
+OBS_GROWL_RIGHT = [0, 1, 0, 0]
+OBS_START = [0, 0, 1, 0]
+OBS_END = [0, 0, 0, 1]
 
 ACTION_OPEN_LEFT = 0
 ACTION_OPEN_RIGHT = 1
@@ -43,8 +44,8 @@ class TigerEnv(gym.Env):
         # Define what the agent can do: LISTEN, OPEN_LEFT, OPEN_RIGHT
         self.action_space = spaces.Discrete(3)
 
-        # Define what the agent can observe: GROWL_LEFT, GROWL_RIGHT, NONE
-        self.observation_space = spaces.Discrete(3)
+        # Define what agent can observe: GROWL_LEFT, GROWL_RIGHT, START, END
+        self.observation_space = spaces.Discrete(4)
 
     def step(self, action):
         """
@@ -103,7 +104,7 @@ class TigerEnv(gym.Env):
         # TODO fix this random update
         self.tiger_left = np.random.randint(0, 2)
         self.tiger_right = 1 - self.tiger_left
-        return OBS_SILENCE
+        return OBS_START
 
     def render(self, mode='human'):
         return
@@ -120,7 +121,9 @@ class TigerEnv(gym.Env):
         elif obs[1] == 1:
             return 'GROWL_RIGHT'
         elif obs[2] == 1:
-            return 'SILENCE'
+            return 'START'
+        elif obs[3] == 1:
+            return 'END'
         else:
             raise ValueError('Invalid observation: '.format(obs))
 
@@ -158,17 +161,17 @@ class TigerEnv(gym.Env):
 
     def _get_obs(self):
         last_action = self.action_episode_memory[self.curr_episode][-1]
-        if last_action == ACTION_LISTEN:
-            # Return accurate observation
-            if np.random.rand() < .85:
-                if self.tiger_left:
-                    return OBS_GROWL_LEFT
-                else:
-                    return OBS_GROWL_RIGHT
-            # Return inaccurate observation
+        if last_action != ACTION_LISTEN:
+            return OBS_END
+        # Return accurate observation
+        if np.random.rand() < .85:
+            if self.tiger_left:
+                return OBS_GROWL_LEFT
             else:
-                if self.tiger_left:
-                    return OBS_GROWL_RIGHT
-                else:
-                    return OBS_GROWL_LEFT
-        return OBS_SILENCE
+                return OBS_GROWL_RIGHT
+        # Return inaccurate observation
+        else:
+            if self.tiger_left:
+                return OBS_GROWL_RIGHT
+            else:
+                return OBS_GROWL_LEFT
