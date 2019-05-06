@@ -26,6 +26,18 @@ class TigerEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, reward_tiger=-100, reward_gold=10, reward_listen=-1):
+        """
+        OpenAI Gym environment for the partially observable Tiger game.
+
+        Parameters
+        ----------
+        reward_tiger : numeric
+            Reward for opening the door with the tiger.
+        reward_gold : numeric
+            Reward for opening the door with the gold.
+        reward_listen : numeric
+            Reward for taking the listen action.
+        """
         self.reward_tiger = reward_tiger
         self.reward_gold = reward_gold
         self.reward_listen = reward_listen
@@ -54,28 +66,29 @@ class TigerEnv(gym.Env):
         Parameters
         ----------
         action : int
+            Action to take.
 
         Returns
         -------
         ob, reward, episode_over, info : tuple
-            ob (object) :
-                an environment-specific object representing your observation of
+            ob : list
+                A list of ones or zeros which together represent the state of
                 the environment.
-            reward (float) :
-                amount of reward achieved by the previous action. The scale
+            reward : float
+                Amount of reward achieved by the previous action. The scale
                 varies between environments, but the goal is always to increase
                 your total reward.
-            episode_over (bool) :
-                whether it's time to reset the environment again. Most (but not
+            episode_over : bool
+                Whether it's time to reset the environment again. Most (but not
                 all) tasks are divided up into well-defined episodes, and done
                 being True indicates the episode has terminated. (For example,
                 perhaps the pole tipped too far, or you lost your last life.)
-            info (dict) :
-                 diagnostic information useful for debugging. It can sometimes
-                 be useful for learning (for example, it might contain the raw
-                 probabilities behind the environment's last state change).
-                 However, official evaluations of your agent are not allowed to
-                 use this for learning.
+            info : dict
+                Diagnostic information useful for debugging. It can sometimes
+                be useful for learning (for example, it might contain the raw
+                probabilities behind the environment's last state change).
+                However, official evaluations of your agent are not allowed to
+                use this for learning.
         """
         done = self.left_door_open or self.right_door_open
         if done:
@@ -94,7 +107,8 @@ class TigerEnv(gym.Env):
 
         Returns
         -------
-        observation (object): the initial observation of the space.
+        object
+            The initial observation of the space.
         """
         self.curr_step = -1
         self.curr_episode += 1
@@ -115,6 +129,16 @@ class TigerEnv(gym.Env):
     def translate_obs(self, obs):
         """
         Method created by JDB to easily interpet the obs. in plain English.
+
+        Parameters
+        ----------
+        obs : list or array-like
+            The observation to be translated.
+
+        Returns
+        -------
+        str
+            A representation of the observation in English.
         """
         if obs[0] == 1:
             return 'GROWL_LEFT'
@@ -129,11 +153,33 @@ class TigerEnv(gym.Env):
 
     def translate_action(self, action):
         """
-        Method created by JDB to easily interpret action in plain English.
+        Method created by JDB to easily interpet the action in plain English.
+
+        Parameters
+        ----------
+        action : int
+            The action to be translated.
+
+        Returns
+        -------
+        str
+            A representation of the action in English.
         """
         return ACTION_MAP[action]
 
     def _take_action(self, action):
+        """
+        How to change the environment when taking an action.
+
+        Parameters
+        ----------
+        action : int
+            Action.
+
+        Returns
+        -------
+        None
+        """
         self.action_episode_memory[self.curr_episode].append(action)
         if action == ACTION_OPEN_LEFT:
             self.left_door_open = True
@@ -145,6 +191,14 @@ class TigerEnv(gym.Env):
             raise ValueError('Invalid action ', action)
 
     def _get_reward(self):
+        """
+        Obtain the reward for the current state of the environment.
+
+        Returns
+        -------
+        float
+            Reward.
+        """
         if not (self.left_door_open or self.right_door_open):
             return self.reward_listen
         if self.left_door_open:
@@ -160,6 +214,14 @@ class TigerEnv(gym.Env):
         raise ValueError('Unreachable state reached.')
 
     def _get_obs(self):
+        """
+        Obtain the observation for the current state of the environment.
+
+        Returns
+        -------
+        list
+            Observation.
+        """
         last_action = self.action_episode_memory[self.curr_episode][-1]
         if last_action != ACTION_LISTEN:
             return OBS_END
