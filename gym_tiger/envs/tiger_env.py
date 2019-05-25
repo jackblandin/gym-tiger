@@ -25,7 +25,8 @@ ACTION_MAP = {
 class TigerEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, reward_tiger=-100, reward_gold=10, reward_listen=-1):
+    def __init__(self, reward_tiger=-100, reward_gold=10, reward_listen=-1,
+                 obs_accuracy=.85):
         """
         OpenAI Gym environment for the partially observable Tiger game.
 
@@ -37,10 +38,14 @@ class TigerEnv(gym.Env):
             Reward for opening the door with the gold.
         reward_listen : numeric
             Reward for taking the listen action.
+        obs_accuracy : numeric
+            Number b/w 0 and 1. The accuracy of the growl. I.e. obs_accuracy of
+            1 means that a GROWL_LEFT implies TIGER_LEFT 100% of the time.
         """
         self.reward_tiger = reward_tiger
         self.reward_gold = reward_gold
         self.reward_listen = reward_listen
+        self.obs_accuracy = obs_accuracy
 
         self.__version__ = "0.1.0"
         logging.info("TigerEnv - Version {}".format(self.__version__))
@@ -226,7 +231,7 @@ class TigerEnv(gym.Env):
         if last_action != ACTION_LISTEN:
             return OBS_END
         # Return accurate observation
-        if np.random.rand() < .85:
+        if np.random.rand() < self.obs_accuracy:
             if self.tiger_left:
                 return OBS_GROWL_LEFT
             else:
