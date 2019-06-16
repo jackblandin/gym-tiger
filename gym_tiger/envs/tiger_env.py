@@ -7,9 +7,9 @@ from gym import spaces
 import numpy as np
 
 
-OBS_GROWL_LEFT = [1, 0, 0, 0]
-OBS_GROWL_RIGHT = [0, 1, 0, 0]
-OBS_START = [0, 0, 1, 0]
+OBS_GROWL_LEFT = [1, 0, 0]
+OBS_GROWL_RIGHT = [0, 1, 0]
+OBS_START = [0, 0, 1]
 
 ACTION_OPEN_LEFT = 0
 ACTION_OPEN_RIGHT = 1
