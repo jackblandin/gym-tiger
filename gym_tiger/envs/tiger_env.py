@@ -78,7 +78,7 @@ class TigerEnv(gym.Env):
         self.action_space = spaces.Discrete(3)
 
         # Define what agent can observe: GROWL_LEFT, GROWL_RIGHT, START
-        self.observation_space = spaces.Discrete(4)
+        self.observation_space = spaces.Discrete(3)
 
     def step(self, action):
         """
