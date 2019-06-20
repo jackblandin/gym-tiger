@@ -67,10 +67,10 @@ class TigerEnv(gym.Env):
         logging.info("TigerEnv - Version {}".format(self.__version__))
 
         # Store what the agent tried
-        self.curr_episode = -1
+        self.curr_episode = -1  # Set to -1 b/c reset() adds 1 to episode
         self.action_episode_memory = []
 
-        self.curr_step = -1
+        self.curr_step = 0
 
         self.reset()
 
@@ -133,7 +133,7 @@ class TigerEnv(gym.Env):
         object
             The initial observation of the space.
         """
-        self.curr_step = -1
+        self.curr_step = 0
         self.curr_episode += 1
         self.action_episode_memory.append([])
         self.left_door_open = False
