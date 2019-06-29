@@ -7,10 +7,16 @@ from gym import spaces
 import numpy as np
 
 
-OBS_GROWL_LEFT = [1, 0, 0]
-OBS_GROWL_RIGHT = [0, 1, 0]
-OBS_START = [0, 0, 1]
+OBS_START = [0]
+OBS_GROWL_LEFT = [1]
+OBS_GROWL_RIGHT = [2]
+OBS_MAP = {
+    OBS_START[0]: 'START',
+    OBS_GROWL_LEFT[0]: 'GROWL_LEFT',
+    OBS_GROWL_RIGHT[0]: 'GROWL_RIGHT',
+}
 
+ACTION_NONE = -1
 ACTION_OPEN_LEFT = 0
 ACTION_OPEN_RIGHT = 1
 ACTION_LISTEN = 2
@@ -18,6 +24,7 @@ ACTION_MAP = {
     ACTION_OPEN_LEFT: 'OPEN_LEFT',
     ACTION_OPEN_RIGHT: 'OPEN_RIGHT',
     ACTION_LISTEN: 'LISTEN',
+    ACTION_NONE: 'NONE',
 }
 
 
@@ -50,6 +57,10 @@ class TigerEnv(gym.Env):
             Current episode as a count.
         action_episode_memory : list<int>
             History of actions taken in episode.
+        observation_episode_memory : list<int>
+            History of observations observed in episode.
+        reward_episode_memory : list<int>
+            History of rewards observed in episode.
         curr_step : int
             Current timestep in episode, as a count.
         action_space : gym.spaces.Discrete
@@ -63,12 +74,13 @@ class TigerEnv(gym.Env):
         self.obs_accuracy = obs_accuracy
         self.max_steps_per_episode = max_steps_per_episode
 
-        self.__version__ = "0.1.0"
+        self.__version__ = "0.0.2"
         logging.info("TigerEnv - Version {}".format(self.__version__))
 
-        # Store what the agent tried
         self.curr_episode = -1  # Set to -1 b/c reset() adds 1 to episode
         self.action_episode_memory = []
+        self.observation_episode_memory = []
+        self.reward_episode_memory = []
 
         self.curr_step = 0
 
@@ -115,13 +127,17 @@ class TigerEnv(gym.Env):
         if done:
             raise RuntimeError("Episode is done")
         self.curr_step += 1
-        self._take_action(action)
+        should_reset = self._take_action(action)
         # Recompute done since action may have modified it
         done = self.curr_step >= self.max_steps_per_episode
         reward = self._get_reward()
-        ob = self._get_obs()
+        self.action_episode_memory[self.curr_episode].append(action)
+        ob = self._get_obs()  # This has to come after adding the action memory
+        self.observation_episode_memory[self.curr_episode].append(ob)
+        self.reward_episode_memory[self.curr_episode].append(reward)
         # Perform resets that happen after each timestep
-        self._step_reset()
+        if should_reset:
+            self._step_reset()
         return ob, reward, done, {}
 
     def reset(self):
@@ -135,12 +151,15 @@ class TigerEnv(gym.Env):
         """
         self.curr_step = 0
         self.curr_episode += 1
-        self.action_episode_memory.append([])
         self.left_door_open = False
         self.right_door_open = False
         self.tiger_left = np.random.randint(0, 2)
         self.tiger_right = 1 - self.tiger_left
-        return OBS_START
+        initial_obs = OBS_START
+        self.action_episode_memory.append([-1])  # Needs to be offset by 1
+        self.observation_episode_memory.append([initial_obs])
+        self.reward_episode_memory.append([0])  # Needs to be offset by 1
+        return initial_obs
 
     def render(self, mode='human'):
         return
@@ -162,14 +181,10 @@ class TigerEnv(gym.Env):
         str
             A representation of the observation in English.
         """
-        if obs[0] == 1:
-            return 'GROWL_LEFT'
-        elif obs[1] == 1:
-            return 'GROWL_RIGHT'
-        elif obs[2] == 1:
-            return 'START'
-        else:
+        if obs[0] not in OBS_MAP:
             raise ValueError('Invalid observation: '.format(obs))
+        else:
+            return OBS_MAP[obs[0]]
 
     def translate_action(self, action):
         """
@@ -198,17 +213,21 @@ class TigerEnv(gym.Env):
 
         Returns
         -------
-        None
+        bool
+            Whether or not to reset the tiger.
         """
-        self.action_episode_memory[self.curr_episode].append(action)
+        should_reset = False
         if action == ACTION_OPEN_LEFT:
             self.left_door_open = True
+            should_reset = True
         elif action == ACTION_OPEN_RIGHT:
             self.right_door_open = True
+            should_reset = True
         elif action == ACTION_LISTEN:
             pass
         else:
             raise ValueError('Invalid action ', action)
+        return should_reset
 
     def _get_reward(self):
         """
@@ -276,4 +295,3 @@ class TigerEnv(gym.Env):
         self.right_door_open = False
         self.tiger_left = np.random.randint(0, 2)
         self.tiger_right = 1 - self.tiger_left
-
